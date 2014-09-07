@@ -3029,10 +3029,13 @@ net.brehaut.ClojureTools = (function (SH) {
   };
 })(SyntaxHighlighter);
 </script><title>gssrden -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">gssrden</h1><h2 class="project-version">0.1.0</h2><br /><p>A GSS plugin for Garden</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">org.clojure/core.match</td><td class="dotted"><hr /></td><td class="dep-version">0.2.1</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#gssrden.core">gssrden.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#gssrden.core" name="gssrden.core"><h1 class="project-name">gssrden.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>A GSS plugin for Garden</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">org.clojure/core.match</td><td class="dotted"><hr /></td><td class="dep-version">0.2.2</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#gssrden.core">gssrden.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#gssrden.core" name="gssrden.core"><h1 class="project-name">gssrden.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>A GSS plugin for Garden</p>
 </td><td class="codes"><pre class="brush: clojure">(ns gssrden.core
   (:require [clojure.string :as s]
-            [clojure.core.match :refer [match]]))</pre></td></tr><tr><td class="docs"><p>TODO: center-in, fill &lt;= QML</p>
+            [clojure.core.match :refer [match]]))</pre></td></tr><tr><td class="docs"><ul>
+<li>TODO: center-in, fill, bypass :this &lt;= QML</li>
+<li>TODO: hiccup helper fn</li>
+</ul>
 </td><td class="codes"></td></tr><tr><td class="docs"><h1>Internal utility functions</h1>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>True if k is a valid Garden key (a keyword, string or symbol).</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- garden-key?
@@ -3151,10 +3154,25 @@ GSS CCSS documentation, strength can be one of</p></li>
 
 <p>and weight is just an integer.</p>
 
+<p>You can get a property prop of element elem like this: <code>(:elem :prop)</code>.</p>
+
 <p>In GSSrden custom constraint and element variables are keywords beginning
 with $: <code>:$my-var</code>. The special pseudo selectors are provided as the
 keywords <code>:window</code>, <code>:this</code> and <code>:parent</code>. You can use intrinsic properties
 exactly like in GSS, by prefixing with intrinsic-: <code>:intrinsic-height</code>.</p>
+
+<p>Note that due to the output being a map, it is not possible to declare
+multiple constraint for a single property in one <code>constraints</code> form. You also
+cannot do non-constraint property assigments in a <code>constraints</code> form (this is
+intentional). Since a Garden rule can contain multiple maps, you can instead
+do this:</p>
+
+<p>[:li :a
+ (constraints
+   (>= :line-height 16))
+ (constraints
+   (&lt;= :line-height (/ (:window :height) 2)))
+ {:color "purple"}]</p>
 
 <p>If you are confused, look at the example above and consult the GSSrden and
 GSS documentation.</p></li>

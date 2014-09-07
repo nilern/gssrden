@@ -3,7 +3,8 @@
   (:require [clojure.string :as s]
             [clojure.core.match :refer [match]]))
 
-;;; TODO: center-in, fill <= QML
+;;; * TODO: center-in, fill, bypass :this <= QML
+;;; * TODO: hiccup helper fn
 
 ;;; Internal utility functions
 ;;; ===========================================================================
@@ -134,10 +135,25 @@
 
    and weight is just an integer.
 
+   You can get a property prop of element elem like this: `(:elem :prop)`.
+
    In GSSrden custom constraint and element variables are keywords beginning
    with $: `:$my-var`. The special pseudo selectors are provided as the
    keywords `:window`, `:this` and `:parent`. You can use intrinsic properties
    exactly like in GSS, by prefixing with intrinsic-: `:intrinsic-height`.
+
+   Note that due to the output being a map, it is not possible to declare
+   multiple constraint for a single property in one `constraints` form. You also
+   cannot do non-constraint property assigments in a `constraints` form (this is
+   intentional). Since a Garden rule can contain multiple maps, you can instead
+   do this:
+
+    [:li :a
+     (constraints
+       (>= :line-height 16))
+     (constraints
+       (<= :line-height (/ (:window :height) 2)))
+     {:color \"purple\"}]
 
    If you are confused, look at the example above and consult the GSSrden and
    GSS documentation."
