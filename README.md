@@ -8,7 +8,7 @@ Installation
 
 ### Leiningen
 
-```
+````clojure
 [gssrden "0.1.0"]
 ```
 
@@ -20,7 +20,7 @@ compile "gssrden:gssrden:0.1.0"
 
 ### Maven
    
-```
+```xml
 <dependency>
   <groupId>gssrden</groupId>
   <artifactId>gssrden</artifactId>
@@ -35,9 +35,9 @@ Install GSS as detailed [here][gss-install]. Direct your Garden-produced CSS
 into a `.gss` file (say, `resources/gss/screen.gss`) and link to it as detailed 
 in the GSS installation, i.e.
 
-```
+```html
 <link rel="stylesheet" type="text/gss" href="gss/screen.gss"></link>
-``
+```
     
 or [Hiccup][hiccup] and similar templates:
 
@@ -77,10 +77,9 @@ constraint strings:
   (<= :height (- (/ (:parent :$col-width) 2)
                  :$my-var 15)
       :strong))
-  ;=> {:width "== body[width] !medium1000"
-       :height
-       "<= (::parent[$col-width] / 2
-             - [$my-var] - 15) !strong"}
+  ;=> 
+  {:width "== body[width] !medium1000"
+   :height "<= (::parent[$col-width] / 2 - [$my-var] - 15) !strong"}
 ```
 
 The constraints can take the following forms:
