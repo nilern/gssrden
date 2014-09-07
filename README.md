@@ -42,7 +42,7 @@ in the GSS installation, i.e.
 or [Hiccup][hiccup] and similar templates:
 
 ```clojure
-   [:link {:rel "stylesheet", :type "test/gss", :href "gss/screen.gss"}]
+[:link {:rel "stylesheet", :type "test/gss", :href "gss/screen.gss"}]
 ```
    
 As of now, the GSSrden API consists of just the `constraints` macro. It can be 
@@ -77,9 +77,9 @@ constraint strings:
   (<= :height (- (/ (:parent :$col-width) 2)
                  :$my-var 15)
       :strong))
-  ;=> 
-  {:width "== body[width] !medium1000"
-   :height "<= (::parent[$col-width] / 2 - [$my-var] - 15) !strong"}
+;=> 
+{:width "== body[width] !medium1000"
+ :height "<= (::parent[$col-width] / 2 - [$my-var] - 15) !strong"}
 ```
 
 The constraints can take the following forms:
@@ -118,12 +118,12 @@ intentional). Since a Garden rule can contain multiple maps, you can instead
 do this:
 
 ```clojure
-    [:li :a
-      (constraints
-        (>= :line-height 16))
-      (constraints
-        (<= :line-height (/ (:window :height) 2)))
-      {:color "purple"}]
+[:li :a
+  (constraints
+    (>= :line-height 16))
+  (constraints
+    (<= :line-height (/ (:window :height) 2)))
+  {:color "purple"}]
 ```
       
 See the included tests and [Marginalia][marginalia] documentation for more 
