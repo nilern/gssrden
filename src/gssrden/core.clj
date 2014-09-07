@@ -143,10 +143,10 @@
    exactly like in GSS, by prefixing with intrinsic-: `:intrinsic-height`.
 
    Note that due to the output being a map, it is not possible to declare
-   multiple constraint for a single property in one `constraints` form. You also
-   cannot do non-constraint property assigments in a `constraints` form (this is
-   intentional). Since a Garden rule can contain multiple maps, you can instead
-   do this:
+   multiple constraints for a single property in one `constraints` form.
+   You also cannot do non-constraint property assigments in a `constraints` form
+   (this is intentional). Since a Garden rule can contain multiple maps, you can
+   instead do this:
 
     [:li :a
      (constraints

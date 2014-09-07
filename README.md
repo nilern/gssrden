@@ -74,8 +74,7 @@ constraint strings:
   (== :width (:body :width)
       :strength :medium
       :weight 1000)
-  (<= :height (- (/ (:parent :$col-width) 2)
-                 :$my-var 15)
+  (<= :height (- (/ (:parent :$col-width) 2) :$my-var 15)
       :strong))
 ;=> 
 {:width "== body[width] !medium1000"
@@ -142,7 +141,7 @@ The rest of GSS:
 
 * Support `@stay`
 * Add [VFL-like sugar][vfl-doc]
-* Support `@if` and `@else`
+* Support [@if and @else][ifelse]
 
 The lack of raw CSS directive support in Garden complicates these tasks.
 
@@ -162,3 +161,4 @@ your option) any later version.
 [marginalia]: https://github.com/gdeer81/marginalia
 [qml]: http://en.wikipedia.org/wiki/QML
 [vfl-doc]: http://gridstylesheets.org/guides/vfl/
+[ifelse]: http://gridstylesheets.org/guides/ifelse/
