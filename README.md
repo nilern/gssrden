@@ -6,9 +6,27 @@ A [GSS][gss] plugin for [Garden][garden].
 Installation
 ------------
 
-Add the following dependency to your `project.clj` file:
+### Leiningen
 
-    [gssrden "0.1.0"]
+```
+[gssrden "0.1.0"]
+```
+
+### Gradle
+
+```
+compile "gssrden:gssrden:0.1.0"
+```
+
+### Maven
+   
+```
+<dependency>
+  <groupId>gssrden</groupId>
+  <artifactId>gssrden</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
 
 Usage
 -----
@@ -17,25 +35,31 @@ Install GSS as detailed [here][gss-install]. Direct your Garden-produced CSS
 into a `.gss` file (say, `resources/gss/screen.gss`) and link to it as detailed 
 in the GSS installation, i.e.
 
-    <link rel="stylesheet" type="text/gss" href="gss/screen.gss"></link>
+```
+<link rel="stylesheet" type="text/gss" href="gss/screen.gss"></link>
+``
     
 or [Hiccup][hiccup] and similar templates:
 
+```clojure
    [:link {:rel "stylesheet", :type "test/gss", :href "gss/screen.gss"}]
+```
    
 As of now, the GSSrden API consists of just the `constraints` macro. It can be 
 used like this:
 
-   (ns super-responsive.styles.screen
-     (:require [garden.def :refer [defstyles]]
-               [gssrden.core :refer [constraints]])
-               
-   (defstyles screen
-     [:body
-       (constraints
-         (== :width (:window :width))
-         (== :height (:window :height)))
-       {:background-color "red"}])
+```clojure
+(ns super-responsive.styles.screen
+  (:require [garden.def :refer [defstyles]]
+            [gssrden.core :refer [constraints]])
+           
+(defstyles screen
+  [:body
+    (constraints
+      (== :width (:window :width))
+      (== :height (:window :height)))
+    {:background-color "red"}])
+```
        
 If you are on ClojureScript, you will have to use `:require-macros` instead.
 
@@ -45,17 +69,19 @@ If you are on ClojureScript, you will have to use `:require-macros` instead.
 valid Garden property map whose keys are GSS properties and values GSS 
 constraint strings:
 
-    (constraints
-      (== :width (:body :width)
-          :strength :medium
-          :weight 1000)
-      (<= :height (- (/ (:parent :$col-width) 2)
-                     :$my-var 15)
-          :strong))
-      ;=> {:width "== body[width] !medium1000"
-           :height
-           "<= (::parent[$col-width] / 2
-                 - [$my-var] - 15) !strong"}
+```clojure
+(constraints
+  (== :width (:body :width)
+      :strength :medium
+      :weight 1000)
+  (<= :height (- (/ (:parent :$col-width) 2)
+                 :$my-var 15)
+      :strong))
+  ;=> {:width "== body[width] !medium1000"
+       :height
+       "<= (::parent[$col-width] / 2
+             - [$my-var] - 15) !strong"}
+```
 
 The constraints can take the following forms:
 
@@ -92,12 +118,14 @@ cannot do non-constraint property assigments in a `constraints` form (this is
 intentional). Since a Garden rule can contain multiple maps, you can instead
 do this:
 
+```clojure
     [:li :a
       (constraints
         (>= :line-height 16))
       (constraints
         (<= :line-height (/ (:window :height) 2)))
       {:color "purple"}]
+```
       
 See the included tests and [Marginalia][marginalia] documentation for more 
 insight into the inner life of GSSrden.
