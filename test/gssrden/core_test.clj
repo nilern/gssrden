@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [gssrden.core :refer [constraints]]))
 
-;;; TODO: "Garden key" tests (accepts keywords, strings and symbols?)
+;;; * TODO: "Garden key" tests (accepts keywords, strings and symbols?)
+;;; * TODO: center-in and fill tests
 
 (deftest inequalities
   (testing "inequality operators"

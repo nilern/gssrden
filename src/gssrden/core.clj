@@ -3,7 +3,7 @@
   (:require [clojure.string :as s]
             [clojure.core.match :refer [match]]))
 
-;;; * TODO: center-in, fill, bypass :this <= QML
+;;; * TODO: bypass :this <= QML (is this prudent?)
 ;;; * TODO: hiccup helper fn
 
 ;;; Internal utility functions
@@ -30,6 +30,18 @@
 
 ;;; The heavy lifting
 ;;; ===========================================================================
+
+(defn- s-w-expr
+  "Generate a GSS string to specify strength or strength and weight:
+
+    (s-w-expr :strong 1000) ;=> \"!strong1000\"
+    (s-w-expr :strong) ;=> \"!strong\"
+
+  If strength is the empty string, return the empty string."
+  ([s] (s-w-expr s ""))
+  ([s w] (if-not (= s "")
+           (str "!" (key->string s) w)
+           "")))
 
 (defn- goal-expr
   "Turn a goal expression expr (the right side of an (in)equality) into its GSS
@@ -69,29 +81,51 @@
     :else expr))
 
 (defn- handle-constraint
-  "Turn a constraint expression c into a vector [property value] where property
+  "Turn a constraint expression c into a map {property value} where property
    is the constrained property and value is the output gss string:
 
     (== :width (body :width) :strengh :medium, :weight 1000))
-    ;=> [:width \"== body[width] !medium1000\"]
+    ;=> {:width \"== body[width] !medium1000\"}
 
    These can then be stuffed into the final constraint property map."
   [c]
+  ;; Need to use vectors with quoted == since quoting the whole list form
+  ;; would prevent center-target/fill-target from evaluating and
+  ;; syntax-quoting would ns-qualify == into clojure.core/==. Furthermore,
+  ;; a list starting with quoted == yields nil since '== is not a
+  ;; function...
   (match (vec c)
-         [_ _ _] (vector (second c)
-                         (str (first c) " "
-                              (goal-expr (last c))))
-         [_ _ _ (:or :strength :s) s (:or :weight :w) w]
-         (let [[k expr] (handle-constraint (drop-last 4 c))]
-           (vector k (str expr " !" (key->string s) w)))
-         [_ _ _ (:or :strength :s) s] (handle-constraint
-                                        (concat c [:weight ""]))
-         [_ _ _ s w] (handle-constraint (concat (drop-last 2 c)
-                                                [:strength s
-                                                 :weight w]))
-         [_ _ _ s] (handle-constraint (concat (drop-last c)
-                                              [:strength s
-                                               :weight ""]))))
+         ;; "Full" syntax:
+         [operator property goal (:or :strength :s) s (:or :weight :w) w]
+         {property
+           (s/trimr (s/join " " [operator (goal-expr goal) (s-w-expr s w)]))}
+
+         ['center-in center-target (:or :strength :s) s (:or :weight :w) w]
+         (into {}
+               (map handle-constraint
+                    [['== :center-x [center-target :center-x] s w]
+                     ['== :center-y [center-target :center-y] s w]]))
+         ['fill fill-target (:or :strength :s) s (:or :weight :w) w]
+         (into {}
+               (map handle-constraint
+                    [['== :center-x [fill-target :center-x] s w]
+                     ['== :center-y [fill-target :center-y] s w]
+                     ['== :width [fill-target :width] s w]
+                     ['== :height [fill-target :height] s w]]))
+
+         ;; Shorter versions:
+         [(:or 'center-in 'fill) _ (:or :strength :s) s] (handle-constraint
+                                                           (concat c [:w ""]))
+         [(:or 'center-in 'fill) _ s w] (handle-constraint
+                                          (concat (drop-last 2 c) [:s s :w w]))
+         [(:or 'center-in 'fill) _ s] (handle-constraint
+                                        (concat (drop-last c) [:s s :w ""]))
+         [(:or 'center-in 'fill) _] (handle-constraint (concat c [:s "" :w ""]))
+
+         [_ _ _] (handle-constraint (concat c [:s "" :w ""]))
+         [_ _ _ (:or :strength :s) s] (handle-constraint (concat c [:w ""]))
+         [_ _ _ s w] (handle-constraint (concat (drop-last 2 c) [:s s :w w]))
+         [_ _ _ s] (handle-constraint (concat (drop-last c) [:s s :w ""]))))
 
 ;;; Public API
 ;;; ===========================================================================
@@ -122,6 +156,10 @@
    * `(eq-operator property goal-expression :s strength)`
    * `(eq-operator property goal-expression strength weight)`
    * `(eq-operator property goal-expression strength)`
+   * `(center-in center-target)`
+   * `(fill fill-target)`
+   * `center-in` and `fill` with strength and weight specified just like for
+     the other forms.
 
    Where eq-operator is an (in)equality operator symbol, property is a GSS
    property (a Garden key) and goal-expression is a linear function of the
@@ -136,6 +174,20 @@
    and weight is just an integer.
 
    You can get a property prop of element elem like this: `(:elem :prop)`.
+
+   `center-in` and `fill` are sugar inspired by QML and are equivalent to
+
+    (constraints
+      (== :center-x (center-target :center-x))
+      (== :center-y (center-target :center-y)))
+
+   and
+
+    (constraints
+      (== :center-x (fill-target :center-x))
+      (== :center-y (fill-target :center-y))
+      (== :width (fill-target :width))
+      (== :height (fill-target :height)))
 
    In GSSrden custom constraint and element variables are keywords beginning
    with $: `:$my-var`. The special pseudo selectors are provided as the
@@ -158,5 +210,5 @@
    If you are confused, look at the example above and consult the GSSrden and
    GSS documentation."
   [& cs]
-  (apply array-map (mapcat handle-constraint cs)))
+  (into {} (map handle-constraint cs)))
 

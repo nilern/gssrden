@@ -3,6 +3,8 @@ GSSrden
 
 A [GSS][gss] plugin for [Garden][garden].
 
+* TODO: change README due to `center-in` and `fill` being implemented.
+
 Installation
 ------------
 

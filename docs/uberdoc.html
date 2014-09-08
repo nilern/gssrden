@@ -3033,7 +3033,7 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(ns gssrden.core
   (:require [clojure.string :as s]
             [clojure.core.match :refer [match]]))</pre></td></tr><tr><td class="docs"><ul>
-<li>TODO: center-in, fill, bypass :this &lt;= QML</li>
+<li>TODO: bypass :this &lt;= QML (is this prudent?)</li>
 <li>TODO: hiccup helper fn</li>
 </ul>
 </td><td class="codes"></td></tr><tr><td class="docs"><h1>Internal utility functions</h1>
@@ -3054,7 +3054,18 @@ net.brehaut.ClojureTools = (function (SH) {
   (cond (keyword? k) (name k)
         (string? k) k
         (symbol? k) (str k)))</pre></td></tr><tr><td class="docs"><h1>The heavy lifting</h1>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Turn a goal expression expr (the right side of an (in)equality) into its GSS
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Generate a GSS string to specify strength or strength and weight:</p>
+
+<pre><code>(s-w-expr :strong 1000) ;=&gt; "!strong1000"
+(s-w-expr :strong) ;=&gt; "!strong"
+</code></pre>
+
+<p>  If strength is the empty string, return the empty string.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- s-w-expr
+  ([s] (s-w-expr s &quot;&quot;))
+  ([s w] (if-not (= s &quot;&quot;)
+           (str &quot;!&quot; (key-&gt;string s) w)
+           &quot;&quot;)))</pre></td></tr><tr><td class="docs"><p>Turn a goal expression expr (the right side of an (in)equality) into its GSS
    counterpart string. To illustrate:</p>
 
 <pre><code>(goal-expr :$col-size) ;=&gt; "[col-size]"
@@ -3090,31 +3101,50 @@ net.brehaut.ClojureTools = (function (SH) {
                (:window :this :parent) (str &quot;::&quot; (key-&gt;string element))
                (key-&gt;string element))
              &quot;[&quot; (key-&gt;string property) &quot;]&quot;)))
-    :else expr))</pre></td></tr><tr><td class="docs"><p>Turn a constraint expression c into a vector [property value] where property
+    :else expr))</pre></td></tr><tr><td class="docs"><p>Turn a constraint expression c into a map {property value} where property
    is the constrained property and value is the output gss string:</p>
 
 <pre><code>(== :width (body :width) :strengh :medium, :weight 1000))
-;=&gt; [:width "== body[width] !medium1000"]
+;=&gt; {:width "== body[width] !medium1000"}
 </code></pre>
 
 <p>   These can then be stuffed into the final constraint property map.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- handle-constraint
   [c]
+  ;; Need to use vectors with quoted == since quoting the whole list form
+  ;; would prevent center-target/fill-target from evaluating and
+  ;; syntax-quoting would ns-qualify == into clojure.core/==. Furthermore,
+  ;; a list starting with quoted == yields nil since '== is not a
+  ;; function...
   (match (vec c)
-         [_ _ _] (vector (second c)
-                         (str (first c) &quot; &quot;
-                              (goal-expr (last c))))
-         [_ _ _ (:or :strength :s) s (:or :weight :w) w]
-         (let [[k expr] (handle-constraint (drop-last 4 c))]
-           (vector k (str expr &quot; !&quot; (key-&gt;string s) w)))
-         [_ _ _ (:or :strength :s) s] (handle-constraint
-                                        (concat c [:weight &quot;&quot;]))
-         [_ _ _ s w] (handle-constraint (concat (drop-last 2 c)
-                                                [:strength s
-                                                 :weight w]))
-         [_ _ _ s] (handle-constraint (concat (drop-last c)
-                                              [:strength s
-                                               :weight &quot;&quot;]))))</pre></td></tr><tr><td class="docs"><h1>Public API</h1>
+         ;; &quot;Full&quot; syntax:
+         [operator property goal (:or :strength :s) s (:or :weight :w) w]
+         {property
+           (s/trimr (s/join &quot; &quot; [operator (goal-expr goal) (s-w-expr s w)]))}
+         ['center-in center-target (:or :strength :s) s (:or :weight :w) w]
+         (into {}
+               (map handle-constraint
+                    [['== :center-x [center-target :center-x] s w]
+                     ['== :center-y [center-target :center-y] s w]]))
+         ['fill fill-target (:or :strength :s) s (:or :weight :w) w]
+         (into {}
+               (map handle-constraint
+                    [['== :center-x [fill-target :center-x] s w]
+                     ['== :center-y [fill-target :center-y] s w]
+                     ['== :width [fill-target :width] s w]
+                     ['== :height [fill-target :height] s w]]))
+         ;; Shorter versions:
+         [(:or 'center-in 'fill) _ (:or :strength :s) s] (handle-constraint
+                                                           (concat c [:w &quot;&quot;]))
+         [(:or 'center-in 'fill) _ s w] (handle-constraint
+                                          (concat (drop-last 2 c) [:s s :w w]))
+         [(:or 'center-in 'fill) _ s] (handle-constraint
+                                        (concat (drop-last c) [:s s :w &quot;&quot;]))
+         [(:or 'center-in 'fill) _] (handle-constraint (concat c [:s &quot;&quot; :w &quot;&quot;]))
+         [_ _ _] (handle-constraint (concat c [:s &quot;&quot; :w &quot;&quot;]))
+         [_ _ _ (:or :strength :s) s] (handle-constraint (concat c [:w &quot;&quot;]))
+         [_ _ _ s w] (handle-constraint (concat (drop-last 2 c) [:s s :w w]))
+         [_ _ _ s] (handle-constraint (concat (drop-last c) [:s s :w &quot;&quot;]))))</pre></td></tr><tr><td class="docs"><h1>Public API</h1>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Take the constraint expressions cs and turn them into a valid Garden
    property map whose keys are GSS properties and values GSS constraint
    strings:</p>
@@ -3141,7 +3171,11 @@ net.brehaut.ClojureTools = (function (SH) {
 <li><code>(eq-operator property goal-expression :strength strength)</code></li>
 <li><code>(eq-operator property goal-expression :s strength)</code></li>
 <li><code>(eq-operator property goal-expression strength weight)</code></li>
-<li><p><code>(eq-operator property goal-expression strength)</code></p>
+<li><code>(eq-operator property goal-expression strength)</code></li>
+<li><code>(center-in center-target)</code></li>
+<li><code>(fill fill-target)</code></li>
+<li><p><code>center-in</code> and <code>fill</code> with strength and weight specified just like for
+ the other forms.</p>
 
 <p>Where eq-operator is an (in)equality operator symbol, property is a GSS
 property (a Garden key) and goal-expression is a linear function of the
@@ -3156,16 +3190,30 @@ GSS CCSS documentation, strength can be one of</p></li>
 
 <p>You can get a property prop of element elem like this: <code>(:elem :prop)</code>.</p>
 
+<p><code>center-in</code> and <code>fill</code> are sugar inspired by QML and are equivalent to</p>
+
+<p>(constraints
+  (== :center-x (center-target :center-x))
+  (== :center-y (center-target :center-y)))</p>
+
+<p>and</p>
+
+<p>(constraints
+  (== :center-x (fill-target :center-x))
+  (== :center-y (fill-target :center-y))
+  (== :width (fill-target :width))
+  (== :height (fill-target :height)))</p>
+
 <p>In GSSrden custom constraint and element variables are keywords beginning
 with $: <code>:$my-var</code>. The special pseudo selectors are provided as the
 keywords <code>:window</code>, <code>:this</code> and <code>:parent</code>. You can use intrinsic properties
 exactly like in GSS, by prefixing with intrinsic-: <code>:intrinsic-height</code>.</p>
 
 <p>Note that due to the output being a map, it is not possible to declare
-multiple constraint for a single property in one <code>constraints</code> form. You also
-cannot do non-constraint property assigments in a <code>constraints</code> form (this is
-intentional). Since a Garden rule can contain multiple maps, you can instead
-do this:</p>
+multiple constraints for a single property in one <code>constraints</code> form.
+You also cannot do non-constraint property assigments in a <code>constraints</code> form
+(this is intentional). Since a Garden rule can contain multiple maps, you can
+instead do this:</p>
 
 <p>[:li :a
  (constraints
@@ -3179,5 +3227,5 @@ GSS documentation.</p></li>
 </ul>
 </td><td class="codes"><pre class="brush: clojure">(defmacro constraints
   [&amp; cs]
-  (apply array-map (mapcat handle-constraint cs)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+  (into {} (map handle-constraint cs)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>
