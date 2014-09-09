@@ -147,6 +147,12 @@ The rest of GSS:
 
 The lack of raw CSS directive support in Garden complicates these tasks.
 
+Known issues
+------------
+
+Symbols won't work as element, property or variable names. Using them would risk
+confusion anyway, so this is not of high priority.
+
 License
 -------
 

@@ -2,8 +2,23 @@
   (:require [clojure.test :refer :all]
             [gssrden.core :refer [constraints]]))
 
-;;; * TODO: "Garden key" tests (accepts keywords, strings and symbols?)
 ;;; * TODO: center-in and fill tests
+
+(deftest garden-keys
+  (testing "keys can be"
+    (testing ":keywords"
+      (is (= (constraints
+               (== :width (- (:window :width) :$emptiness)))
+             {:width "== (::window[width] - [$emptiness])"})))
+    (testing "\"strings\""
+      (is (= (constraints
+               (== "width" (- ("window" "width") "$emptiness")))
+               {"width" "== (::window[width] - [$emptiness])"})))))
+    ;; symbols won't work, but using them is stupid anyway...
+    ;(testing "symbols"
+    ;  (is (= (constraints
+    ;           (== width (- (window width) $emptiness)))
+    ;         {'width "== (::window[width] - [$emptiness])"})))))
 
 (deftest inequalities
   (testing "inequality operators"

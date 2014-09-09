@@ -56,7 +56,8 @@
 
    Non-tail recursive, but won't consume much stack anyway."
   [expr]
-  (cond ;; Custom constraint variable
+  (cond
+    ;; Custom constraint variable
     ((every-pred garden-key? #(= (first (key->string %)) \$)) expr)
     (str "[" (key->string expr) "]")
     (coll? expr)
@@ -64,20 +65,20 @@
       ;; Math operation
       (#{'+ '- '* '/} (first expr))
       (let [[operator & operands] expr
-            math-expr (interpose operator
-                                 (map goal-expr operands))]
+            math-expr (->> operands
+                           (map goal-expr)
+                           (interpose operator)
+                           (s/join " "))]
         ;; operator precedence:
         (if (#{'+ '-} operator)
-          (str "(" (s/join " " math-expr) ")")
-          (s/join " " math-expr)))
+          (str "(" math-expr ")")
+          math-expr))
       ;; Element property get
       ((every-pred coll? #(= (count %) 2)) expr)
-      (let [[element property] expr]
-        (str (case element
-               ;; special pseudos:
-               (:window :this :parent) (str "::" (key->string element))
-               (key->string element))
-             "[" (key->string property) "]")))
+      (let [[element property] (map key->string expr)
+            special-pseudos #{"window" "this" "parent"}]
+        (str (when (special-pseudos element) "::")
+             element "[" property "]")))
     :else expr))
 
 (defn- handle-constraint
@@ -117,15 +118,15 @@
          [(:or 'center-in 'fill) _ (:or :strength :s) s] (handle-constraint
                                                            (concat c [:w ""]))
          [(:or 'center-in 'fill) _ s w] (handle-constraint
-                                          (concat (drop-last 2 c) [:s s :w w]))
+                                          (concat (take 3 c) [:s s :w w]))
          [(:or 'center-in 'fill) _ s] (handle-constraint
-                                        (concat (drop-last c) [:s s :w ""]))
+                                        (concat (take 3 c) [:s s :w ""]))
          [(:or 'center-in 'fill) _] (handle-constraint (concat c [:s "" :w ""]))
 
          [_ _ _] (handle-constraint (concat c [:s "" :w ""]))
          [_ _ _ (:or :strength :s) s] (handle-constraint (concat c [:w ""]))
-         [_ _ _ s w] (handle-constraint (concat (drop-last 2 c) [:s s :w w]))
-         [_ _ _ s] (handle-constraint (concat (drop-last c) [:s s :w ""]))))
+         [_ _ _ s w] (handle-constraint (concat (take 3 c) [:s s :w w]))
+         [_ _ _ s] (handle-constraint (concat (take 3 c) [:s s :w ""]))))
 
 ;;; Public API
 ;;; ===========================================================================
