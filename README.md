@@ -9,13 +9,13 @@ Installation
 ### Leiningen
 
 ````clojure
-[gssrden "0.1.0"]
+[gssrden "0.2.0"]
 ```
 
 ### Gradle
 
 ```
-compile "gssrden:gssrden:0.1.0"
+compile "gssrden:gssrden:0.2.0"
 ```
 
 ### Maven
@@ -24,7 +24,7 @@ compile "gssrden:gssrden:0.1.0"
 <dependency>
   <groupId>gssrden</groupId>
   <artifactId>gssrden</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
