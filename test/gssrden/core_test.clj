@@ -2,8 +2,6 @@
   (:require [clojure.test :refer :all]
             [gssrden.core :refer [constraints]]))
 
-;;; * TODO: center-in and fill tests
-
 (deftest garden-keys
   (testing "keys can be"
     (testing ":keywords"
@@ -110,3 +108,18 @@
              {:width (str "== (::window[width] - aside[width]) "
                           "* ([$magnification] + [$compensation]) "
                           "/ 2")})))))
+
+(deftest sugar
+  (testing "convenience functions"
+    (testing "center-in"
+      (is (= (constraints
+               (center-in :parent))
+             {:center-x "== ::parent[center-x]"
+              :center-y "== ::parent[center-y]"})))
+    (testing "fill"
+      (is (= (constraints
+               (fill :parent))
+             {:center-x "== ::parent[center-x]"
+              :center-y "== ::parent[center-y]"
+              :width "== ::parent[width]"
+              :height "== ::parent[height]"})))))

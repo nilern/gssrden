@@ -1,10 +1,8 @@
 (ns gssrden.core
   "A GSS plugin for Garden"
   (:require [clojure.string :as s]
-            [clojure.core.match :refer [match]]))
-
-;;; * TODO: bypass :this <= QML (is this prudent?)
-;;; * TODO: hiccup helper fn
+            [clojure.core.match :refer [match]])
+  (:import java.net.URI))
 
 ;;; Internal utility functions
 ;;; ===========================================================================
@@ -27,6 +25,17 @@
   (cond (keyword? k) (name k)
         (string? k) k
         (symbol? k) (str k)))
+
+;;; These are from hiccup.util:
+
+(defprotocol ToURI
+  (^URI to-uri- [x] "Convert a value into a URI."))
+
+(extend-protocol ToURI
+  URI
+  (to-uri- [u] u)
+  String
+  (to-uri- [s] (URI. s)))
 
 ;;; The heavy lifting
 ;;; ===========================================================================
@@ -176,19 +185,23 @@
 
    You can get a property prop of element elem like this: `(:elem :prop)`.
 
-   `center-in` and `fill` are sugar inspired by QML and are equivalent to
+   `center-in` and `fill` are sugar inspired by QML and are simply
 
-    (constraints
-      (== :center-x (center-target :center-x))
-      (== :center-y (center-target :center-y)))
+    (= (constraints
+         (center-in :parent))
+       (constraints
+         (== :center-x (:parent :center-x))
+         (== :center-y (:parent :center-y))))
 
    and
 
-    (constraints
-      (== :center-x (fill-target :center-x))
-      (== :center-y (fill-target :center-y))
-      (== :width (fill-target :width))
-      (== :height (fill-target :height)))
+    (= (constraints
+         (fill :parent))
+       (constraints
+         (== :center-x (:parent :center-x))
+         (== :center-y (:parent :center-y))
+         (== :width (:parent :width))
+         (== :height (:parent :height))))
 
    In GSSrden custom constraint and element variables are keywords beginning
    with $: `:$my-var`. The special pseudo selectors are provided as the
@@ -213,3 +226,9 @@
   [& cs]
   (into {} (map handle-constraint cs)))
 
+;; adapted from hiccup.page/include-css:
+(defn include-gss
+  "Include a list of external gss stylesheet files."
+  [& styles]
+  (for [style styles]
+    [:link {:type "text/gss", :href (to-uri- style), :rel "stylesheet"}]))

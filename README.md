@@ -3,8 +3,6 @@ GSSrden
 
 A [GSS][gss] plugin for [Garden][garden].
 
-* TODO: change README due to `center-in` and `fill` being implemented.
-
 Installation
 ------------
 
@@ -46,9 +44,15 @@ or [Hiccup][hiccup] and similar templates:
 ```clojure
 [:link {:rel "stylesheet", :type "test/gss", :href "gss/screen.gss"}]
 ```
+
+For Hiccup in particular, there is also a helper function, include-gss:
+
+```clojure
+(gssrden.core/include-gss "gss/screen.gss" "gss/colors.gss")
+```
    
-As of now, the GSSrden API consists of just the `constraints` macro. It can be 
-used like this:
+In addition to that Hiccup helper, the GSSrden API consists of just the 
+`constraints` macro, which can be used like this:
 
 ```clojure
 (ns super-responsive.styles.screen
@@ -92,6 +96,10 @@ The constraints can take the following forms:
 * `(eq-operator property goal-expression :s strength)`
 * `(eq-operator property goal-expression strength weight)`
 * `(eq-operator property goal-expression strength)`
+* `(center-in center-target)`
+* `(fill fill-target)`
+* `center-in` and `fill` with strength and weight specified just like for
+ the other forms.
 
 Where eq-operator is an (in)equality operator symbol, property is a GSS
 property (a Garden key) and goal-expression is a linear function of the
@@ -106,6 +114,28 @@ properties of certain elements and GSS variables. As described in the
 and weight is just an integer.
 
 You can get a property prop of element elem like this: `(:elem :prop)`.
+
+`center-in` and `fill` are sugar inspired by QML and are simply
+
+```clojure
+(= (constraints
+     (center-in :parent))
+   (constraints
+     (== :center-x (:parent :center-x))
+     (== :center-y (:parent :center-y))))
+```
+
+and
+
+```clojure
+(= (constraints
+     (fill :parent))
+   (constraints
+     (== :center-x (:parent :center-x))
+     (== :center-y (:parent :center-y))
+     (== :width (:parent :width))
+     (== :height (:parent :height))))
+```
 
 In GSSrden custom constraint and element variables are keywords beginning
 with $: `:$my-var`. The special pseudo selectors are provided as the
@@ -132,12 +162,6 @@ insight into the inner life of GSSrden.
       
 Future plans
 ------------
-
-Some [QML][qml]-inspired conveniences:
-
-* `center-in`
-* `fill`
-* implicit `:this`
 
 The rest of GSS:
 
