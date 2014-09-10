@@ -3028,15 +3028,12 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>gssrden -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">gssrden</h1><h2 class="project-version">0.1.0</h2><br /><p>A GSS plugin for Garden</p>
+</script><title>gssrden -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">gssrden</h1><h2 class="project-version">0.2.0</h2><br /><p>A GSS plugin for Garden</p>
 </div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">org.clojure/core.match</td><td class="dotted"><hr /></td><td class="dep-version">0.2.2</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#gssrden.core">gssrden.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#gssrden.core" name="gssrden.core"><h1 class="project-name">gssrden.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>A GSS plugin for Garden</p>
 </td><td class="codes"><pre class="brush: clojure">(ns gssrden.core
   (:require [clojure.string :as s]
-            [clojure.core.match :refer [match]]))</pre></td></tr><tr><td class="docs"><ul>
-<li>TODO: bypass :this &lt;= QML (is this prudent?)</li>
-<li>TODO: hiccup helper fn</li>
-</ul>
-</td><td class="codes"></td></tr><tr><td class="docs"><h1>Internal utility functions</h1>
+            [clojure.core.match :refer [match]])
+  (:import java.net.URI))</pre></td></tr><tr><td class="docs"><h1>Internal utility functions</h1>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>True if k is a valid Garden key (a keyword, string or symbol).</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- garden-key?
   [k]
@@ -3053,7 +3050,15 @@ net.brehaut.ClojureTools = (function (SH) {
   [k]
   (cond (keyword? k) (name k)
         (string? k) k
-        (symbol? k) (str k)))</pre></td></tr><tr><td class="docs"><h1>The heavy lifting</h1>
+        (symbol? k) (str k)))</pre></td></tr><tr><td class="docs"><p>These are from hiccup.util:</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defprotocol ToURI
+  (^URI to-uri- [x] &quot;Convert a value into a URI.&quot;))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(extend-protocol ToURI
+  URI
+  (to-uri- [u] u)
+  String
+  (to-uri- [s] (URI. s)))</pre></td></tr><tr><td class="docs"><h1>The heavy lifting</h1>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Generate a GSS string to specify strength or strength and weight:</p>
 
 <pre><code>(s-w-expr :strong 1000) ;=&gt; "!strong1000"
@@ -3079,7 +3084,8 @@ net.brehaut.ClojureTools = (function (SH) {
 <p>   Non-tail recursive, but won't consume much stack anyway.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- goal-expr
   [expr]
-  (cond ;; Custom constraint variable
+  (cond
+    ;; Custom constraint variable
     ((every-pred garden-key? #(= (first (key-&gt;string %)) \$)) expr)
     (str &quot;[&quot; (key-&gt;string expr) &quot;]&quot;)
     (coll? expr)
@@ -3087,20 +3093,20 @@ net.brehaut.ClojureTools = (function (SH) {
       ;; Math operation
       (#{'+ '- '* '/} (first expr))
       (let [[operator &amp; operands] expr
-            math-expr (interpose operator
-                                 (map goal-expr operands))]
+            math-expr (-&gt;&gt; operands
+                           (map goal-expr)
+                           (interpose operator)
+                           (s/join &quot; &quot;))]
         ;; operator precedence:
         (if (#{'+ '-} operator)
-          (str &quot;(&quot; (s/join &quot; &quot; math-expr) &quot;)&quot;)
-          (s/join &quot; &quot; math-expr)))
+          (str &quot;(&quot; math-expr &quot;)&quot;)
+          math-expr))
       ;; Element property get
       ((every-pred coll? #(= (count %) 2)) expr)
-      (let [[element property] expr]
-        (str (case element
-               ;; special pseudos:
-               (:window :this :parent) (str &quot;::&quot; (key-&gt;string element))
-               (key-&gt;string element))
-             &quot;[&quot; (key-&gt;string property) &quot;]&quot;)))
+      (let [[element property] (map key-&gt;string expr)
+            special-pseudos #{&quot;window&quot; &quot;this&quot; &quot;parent&quot;}]
+        (str (when (special-pseudos element) &quot;::&quot;)
+             element &quot;[&quot; property &quot;]&quot;)))
     :else expr))</pre></td></tr><tr><td class="docs"><p>Turn a constraint expression c into a map {property value} where property
    is the constrained property and value is the output gss string:</p>
 
@@ -3137,14 +3143,14 @@ net.brehaut.ClojureTools = (function (SH) {
          [(:or 'center-in 'fill) _ (:or :strength :s) s] (handle-constraint
                                                            (concat c [:w &quot;&quot;]))
          [(:or 'center-in 'fill) _ s w] (handle-constraint
-                                          (concat (drop-last 2 c) [:s s :w w]))
+                                          (concat (take 3 c) [:s s :w w]))
          [(:or 'center-in 'fill) _ s] (handle-constraint
-                                        (concat (drop-last c) [:s s :w &quot;&quot;]))
+                                        (concat (take 3 c) [:s s :w &quot;&quot;]))
          [(:or 'center-in 'fill) _] (handle-constraint (concat c [:s &quot;&quot; :w &quot;&quot;]))
          [_ _ _] (handle-constraint (concat c [:s &quot;&quot; :w &quot;&quot;]))
          [_ _ _ (:or :strength :s) s] (handle-constraint (concat c [:w &quot;&quot;]))
-         [_ _ _ s w] (handle-constraint (concat (drop-last 2 c) [:s s :w w]))
-         [_ _ _ s] (handle-constraint (concat (drop-last c) [:s s :w &quot;&quot;]))))</pre></td></tr><tr><td class="docs"><h1>Public API</h1>
+         [_ _ _ s w] (handle-constraint (concat (take 3 c) [:s s :w w]))
+         [_ _ _ s] (handle-constraint (concat (take 3 c) [:s s :w &quot;&quot;]))))</pre></td></tr><tr><td class="docs"><h1>Public API</h1>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Take the constraint expressions cs and turn them into a valid Garden
    property map whose keys are GSS properties and values GSS constraint
    strings:</p>
@@ -3190,19 +3196,23 @@ GSS CCSS documentation, strength can be one of</p></li>
 
 <p>You can get a property prop of element elem like this: <code>(:elem :prop)</code>.</p>
 
-<p><code>center-in</code> and <code>fill</code> are sugar inspired by QML and are equivalent to</p>
+<p><code>center-in</code> and <code>fill</code> are sugar inspired by QML and are simply</p>
 
-<p>(constraints
-  (== :center-x (center-target :center-x))
-  (== :center-y (center-target :center-y)))</p>
+<p>(= (constraints
+     (center-in :parent))
+   (constraints
+     (== :center-x (:parent :center-x))
+     (== :center-y (:parent :center-y))))</p>
 
 <p>and</p>
 
-<p>(constraints
-  (== :center-x (fill-target :center-x))
-  (== :center-y (fill-target :center-y))
-  (== :width (fill-target :width))
-  (== :height (fill-target :height)))</p>
+<p>(= (constraints
+     (fill :parent))
+   (constraints
+     (== :center-x (:parent :center-x))
+     (== :center-y (:parent :center-y))
+     (== :width (:parent :width))
+     (== :height (:parent :height))))</p>
 
 <p>In GSSrden custom constraint and element variables are keywords beginning
 with $: <code>:$my-var</code>. The special pseudo selectors are provided as the
@@ -3227,5 +3237,11 @@ GSS documentation.</p></li>
 </ul>
 </td><td class="codes"><pre class="brush: clojure">(defmacro constraints
   [&amp; cs]
-  (into {} (map handle-constraint cs)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+  (into {} (map handle-constraint cs)))</pre></td></tr><tr><td class="docs"><p>Include a list of external gss stylesheet files.</p>
+
+<p>adapted from hiccup.page/include-css:</p>
+</td><td class="codes"><pre class="brush: clojure">(defn include-gss
+  [&amp; styles]
+  (for [style styles]
+    [:link {:type &quot;text/gss&quot;, :href (to-uri- style), :rel &quot;stylesheet&quot;}]))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>
